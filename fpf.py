@@ -41,41 +41,39 @@ def make_filedict(root):
     filedict = load_filedict(root)
     print('updating...')
     for (path, dirs, files) in os.walk(root):
+        cwd = path.replace(root, '')
+        if '.git' in cwd:
+            continue
         for filename in files:
             # .fdictファイルは無視する
             if filename=='.fdict':
                 continue
-            # ファイルのフルパスを取得する
-            file_fullpath = path+'/'+filename
+            # ファイルのフルパスとショートパスを取得する
+            file_fullpath  = path+'/'+filename
+            file_shortpath = cwd+'/'+filename
             # ファイルのハッシュ値を計算する
             hasher = hashlib.md5()
             with open(file_fullpath, 'rb') as fobj:
-                while True:
-                    chunk = fobj.read(2048*hasher.block_size)
-                    if len(chunk) == 0:
-                        break
-                    hasher.update(chunk)
+                hasher.update(fobj.read())
             digest = hasher.hexdigest()
             # キーをハッシュ値としてファイルを辞書に追加する
-            # 同じハッシュ値をもつファイルに出会ったときの処理をまだ考えていない．
-            filedict[filename] = {
-                                'hash': digest,
-                                'filepath': file_fullpath.replace(root+'/', ''),
-                               }
+            if digest in filedict:
+                # 同じハッシュ値のファイルが存在したらファイルパスを確認する
+                if file_shortpath!=filedict[digest]['filepath']:
+                    # ファイルのパスが違う場合は確認
+                    print("same file exist: {}, {}".format(file_shortpath, filedict[digest]['filepath']))
+            else:
+                filedict[digest] = {
+                                    'filename': filename,
+                                    'filepath': file_shortpath,
+                                   }
     # 更新した辞書を保存する
     save_filedict(root, filedict=filedict)
     print('done.')
 
-# get root
-def get_root(args):
-    if args.d == None:
-        return os.getcwd()
-    else:
-        return args.d
-
 # subcommands
 def init(args):
-    root = get_root(args)
+    root = os.getcwd()
     if not os.path.exists(root+'/'+'.fdict'):
         save_filedict(root)
         print('initialize .fdict')
@@ -83,13 +81,13 @@ def init(args):
         print('.fdict already exist')
 
 def print_filedict(args):
-    root = get_root(args)
+    root = os.getcwd()
     filedict = load_filedict(root)
     for h in filedict:
         print(filedict[h])
 
 def update(args):
-    root = get_root(args)
+    root = os.getcwd()
     make_filedict(root)
 
 
@@ -98,7 +96,6 @@ def main():
     import argparse
     # パーサとサブパーサの作成
     parser = argparse.ArgumentParser(description='This is File ProFiler')
-    parser.add_argument('-d', help='working directory')
     subparsers = parser.add_subparsers()
 
     # init command
@@ -111,6 +108,7 @@ def main():
 
     # update command
     parser_update = subparsers.add_parser('update', help='update .fdict')
+    # forceオプションを実装したい
     parser_update.set_defaults(handler=update)
 
     # コマンドライン引数のパースを行いハンドラ関数を実行
