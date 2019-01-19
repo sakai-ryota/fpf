@@ -37,7 +37,7 @@ def load_filedict(root):
 
 # complex function
 def make_filedict(root):
-    # 現在の辞書を読み出す
+    # 現在の辞書を読み出す（forceオプションが有効な場合は新規辞書を作成する（未実装））
     filedict = load_filedict(root)
     print('updating...')
     for (path, dirs, files) in os.walk(root):
@@ -52,7 +52,7 @@ def make_filedict(root):
             file_fullpath  = path+'/'+filename
             file_shortpath = cwd+'/'+filename
             # ファイルのハッシュ値を計算する
-            hasher = hashlib.md5()
+            hasher = hashlib.blake2b()
             with open(file_fullpath, 'rb') as fobj:
                 hasher.update(fobj.read())
             digest = hasher.hexdigest()
