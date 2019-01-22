@@ -39,6 +39,8 @@ def load_filedict(root):
 def make_filedict(root):
     # 現在の辞書を読み出す（forceオプションが有効な場合は新規辞書を作成する（未実装））
     filedict = load_filedict(root)
+    # キーのリストを作成しておく（ファイルの変更や消去を調べるため）
+    hashkeys = list(filedict.keys())
     print('updating...')
     for (path, dirs, files) in os.walk(root):
         cwd = path.replace(root, '')
@@ -57,11 +59,18 @@ def make_filedict(root):
                 hasher.update(fobj.read())
             digest = hasher.hexdigest()
             # キーをハッシュ値としてファイルを辞書に追加する
+            # 計算したハッシュ値が今までのfdictに存在する場合
             if digest in filedict:
+                # キーのリストからdigestを削除しておく
+                hashkeys.remove(digest) # ← バグってる
                 # 同じハッシュ値のファイルが存在したらファイルパスを確認する
                 if file_shortpath!=filedict[digest]['filepath']:
                     # ファイルのパスが違う場合は確認
                     print("same file exist: {}, {}".format(file_shortpath, filedict[digest]['filepath']))
+            # 計算したハッシュ値が今までのfdictに存在しない場合
+            # fdictのfilepathを用いて検査中のファイルが過去に登録されていたかを確認
+            #   filepathに重複が存在しない場合：未登録のファイルである
+            #   filepathに重複が存在する場合　：ファイルの内容が変更された
             else:
                 filedict[digest] = {
                                     'filename': filename,
